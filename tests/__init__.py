@@ -1,0 +1,1 @@
+"""sqlcli test suite."""
