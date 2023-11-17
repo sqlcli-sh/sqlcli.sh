@@ -24,6 +24,8 @@ sqlcli = "sqlcli.cli:app"
 pydantic = ">=1.10.7"
 python = ">=3.8,<4.0"
 typer = { extras = ["all"], version = ">=0.9.0" }
+sqlalchemy = "^2.0.23"
+rich = "^13.7.0"
 
 [tool.poetry.group.test.dependencies]  # https://python-poetry.org/docs/master/managing-dependencies/
 commitizen = ">=3.2.1"
