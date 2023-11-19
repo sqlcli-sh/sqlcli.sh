@@ -4,9 +4,7 @@ from typing import Any, List, Union
 
 
 def isexception(obj: Any) -> bool:
-    """Given an object, return a boolean indicating whether it is an instance
-    or subclass of :py:class:`Exception`.
-    """
+    """Given an object, return a boolean indicating whether it is an instance or subclass of :py:class:`Exception`."""
     if isinstance(obj, Exception):
         return True
     if isclass(obj) and issubclass(obj, Exception):
@@ -14,11 +12,13 @@ def isexception(obj: Any) -> bool:
     return False
 
 
-class Record(object):
+class Record:
     """A row, from a query, from a database."""
-    __slots__ = ('_keys', '_values')
+
+    __slots__ = ("_keys", "_values")
 
     def __init__(self, keys: List[str], values: List[Any]):
+        """Initialize a Record with keys and values."""
         self._keys = keys
         self._values = values
 
@@ -34,9 +34,11 @@ class Record(object):
         return self._values
 
     def __repr__(self):
-        return '<Record {}>'.format(self.export('json')[1:-1])
+        """Returns a string representation of the Record."""
+        return "<Record {}>".format(self.export("json")[1:-1])
 
     def __getitem__(self, key: Union[int, str]) -> Any:
+        """Support for index-based and string-based lookup."""
         # Support for index-based lookup.
         if isinstance(key, int):
             return self.values()[key]
@@ -45,20 +47,21 @@ class Record(object):
         if key in self.keys():
             i = self.keys().index(key)
             if self.keys().count(key) > 1:
-                raise KeyError("Record contains multiple '{}' fields.".format(key))
+                raise KeyError(f"Record contains multiple '{key}' fields.")
             return self.values()[i]
 
-        raise KeyError("Record contains no '{}' field.".format(key))
+        raise KeyError(f"Record contains no '{key}' field.")
 
     def __getattr__(self, key: Union[int, str]) -> Any:
+        """Support for attribute-based lookup."""
         try:
             return self[key]
         except KeyError as e:
-            raise AttributeError(e)
+            raise AttributeError(e) from e
 
     def __dir__(self):
-        standard = dir(super(Record, self))
-        # Merge standard attrs with generated ones (from column names).
+        """Merge standard attrs with generated ones (from column names)."""
+        standard = dir(super())
         return sorted(standard + [str(k) for k in self.keys()])
 
     def get(self, key: Union[int, str], default=None) -> Any:
@@ -68,25 +71,32 @@ class Record(object):
         except KeyError:
             return default
 
-    def as_dict(self, ordered: bool=False):
+    def as_dict(self, ordered: bool = False):
         """Returns the row as a dictionary, as ordered."""
         items = zip(self.keys(), self.values())
 
         return OrderedDict(items) if ordered else dict(items)
 
-class RecordCollection(object):
+
+class RecordCollection:
     """A set of excellent Records from a query."""
+
     def __init__(self, rows):
+        """Initialize a RecordCollection with rows.
+
+        Args:
+            rows: The rows to be stored in the RecordCollection.
+        """
         self._rows = rows
         self._all_rows = []
         self.pending = True
 
     def __repr__(self):
-        return '<RecordCollection size={} pending={}>'.format(len(self), self.pending)
+        """Returns a string representation of the RecordCollection."""
+        return f"<RecordCollection size={len(self)} pending={self.pending}>"
 
     def __iter__(self):
-        """Iterate over all rows, consuming the underlying generator
-        only when necessary."""
+        """Iterate over all rows, consuming the underlying generator only when necessary."""
         i = 0
         while True:
             # Other code may have iterated between yields,
@@ -102,94 +112,102 @@ class RecordCollection(object):
                     return
             i += 1
 
-    def next(self):
-        return self.__next__()
-
     def __next__(self):
+        """Returns the next row in the RecordCollection."""
         try:
             nextrow = next(self._rows)
             self._all_rows.append(nextrow)
             return nextrow
-        except StopIteration:
+        except StopIteration as stop:
             self.pending = False
-            raise StopIteration('RecordCollection contains no more rows.')
-
-    def __getitem__(self, key):
-        is_int = isinstance(key, int)
-
-        # Convert RecordCollection[1] into slice.
-        if is_int:
-            key = slice(key, key + 1)
-
-        while len(self) < key.stop or key.stop is None:
-            try:
-                next(self)
-            except StopIteration:
-                break
-
-        rows = self._all_rows[key]
-        if is_int:
-            return rows[0]
-        else:
-            return RecordCollection(iter(rows))
+            raise StopIteration("RecordCollection contains no more rows.") from stop
 
     def __len__(self):
+        """Returns the number of rows in the RecordCollection."""
         return len(self._all_rows)
 
-    def all(self, as_dict=False, as_ordereddict=False):
-        """Returns a list of all rows for the RecordCollection. If they haven't
-        been fetched yet, consume the iterator and cache the results."""
+    def all(self, as_dict=False, as_ordereddict=False):  # noqa: A003
+        """Returns a list of all rows for the RecordCollection.
 
+        If they haven't been fetched yet, consume the iterator and cache the results.
+
+        Args:
+            as_dict: A boolean indicating whether to return the rows as dictionaries.
+            as_ordereddict: A boolean indicating whether to return the rows as ordered dictionaries.
+        """
         # By calling list it calls the __iter__ method
         rows = list(self)
 
         if as_dict:
             return [r.as_dict() for r in rows]
-        elif as_ordereddict:
+        if as_ordereddict:
             return [r.as_dict(ordered=True) for r in rows]
 
         return rows
 
     def as_dict(self, ordered=False):
-        return self.all(as_dict=not(ordered), as_ordereddict=ordered)
+        """Returns all rows as dictionaries or ordered dictionaries.
+
+        Args:
+            ordered: A boolean indicating whether to return the rows as ordered dictionaries.
+        """
+        return self.all(as_dict=not (ordered), as_ordereddict=ordered)
 
     def first(self, default=None, as_dict=False, as_ordereddict=False):
-        """Returns a single record for the RecordCollection, or `default`. If
-        `default` is an instance or subclass of Exception, then raise it
-        instead of returning it."""
+        """Returns a single record for the RecordCollection, or `default`.
 
+        If `default` is an instance or subclass of Exception, then raise it
+        instead of returning it.
+
+        Args:
+            default: The default value to return if the RecordCollection is empty.
+            as_dict: A boolean indicating whether to return the record as a dictionary.
+            as_ordereddict: A boolean indicating whether to return the record as an ordered dictionary.
+        """
         # Try to get a record, or return/raise default.
         try:
             record = self[0]
-        except IndexError:
+        except IndexError as e:
             if isexception(default):
-                raise default
+                raise default from e
             return default
 
         # Cast and return.
         if as_dict:
             return record.as_dict()
-        elif as_ordereddict:
+        if as_ordereddict:
             return record.as_dict(ordered=True)
-        else:
-            return record
+
+        return record
 
     def one(self, default=None, as_dict=False, as_ordereddict=False):
-        """Returns a single record for the RecordCollection, ensuring that it
-        is the only record, or returns `default`. If `default` is an instance
-        or subclass of Exception, then raise it instead of returning it."""
+        """Returns a single record for the RecordCollection.
 
+        Ensures that it is the only record, or returns `default`. If `default` is an instance
+        or subclass of Exception, then raise it instead of returning it.
+
+        Args:
+            default: The default value to return if the RecordCollection is empty or contains more than one row.
+            as_dict: A boolean indicating whether to return the record as a dictionary.
+            as_ordereddict: A boolean indicating whether to return the record as an ordered dictionary.
+        """
         # Ensure that we don't have more than one row.
         try:
             self[1]
         except IndexError:
             return self.first(default=default, as_dict=as_dict, as_ordereddict=as_ordereddict)
         else:
-            raise ValueError('RecordCollection contained more than one row. '
-                             'Expects only one row when using '
-                             'RecordCollection.one')
+            raise ValueError(
+                "RecordCollection contained more than one row. "
+                "Expects only one row when using "
+                "RecordCollection.one"
+            )
 
     def scalar(self, default=None):
-        """Returns the first column of the first row, or `default`."""
+        """Returns the first column of the first row, or `default`.
+
+        Args:
+            default: The default value to return if the RecordCollection is empty.
+        """
         row = self.one()
         return row[0] if row else default
