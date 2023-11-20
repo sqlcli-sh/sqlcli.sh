@@ -1,6 +1,5 @@
 """sqlcli CLI."""
 
-from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
@@ -28,9 +27,6 @@ def version_callback(value: bool):
 # pylint: disable=too-many-arguments
 @app.callback(invoke_without_command=True)
 def cli(
-    config_path: Annotated[
-        Path, typer.Option(typer.get_app_dir("tokern"), help="Path to config directory")
-    ],
     version: Annotated[
         Optional[bool], typer.Option("--version", callback=version_callback, is_eager=True)
     ] = None,
@@ -41,8 +37,6 @@ def cli(
         config_path (Path): Path to the configuration directory.
         version (Optional[bool]): If True, the version of the application is printed.
     """
-    app_dir_path = Path(config_path)
-    app_dir_path.mkdir(parents=True, exist_ok=True)
 
 
 @app.command()
@@ -66,12 +60,14 @@ def query(
         if sql:
             collection = db.execute(sql)
             table = Table(show_header=True, header_style="bold magenta")
-            first = collection[0]
-            for key in first:
-                table.add_column(key)
+            first = True
 
             for record in collection:
-                table.add_row(*record.values())
+                if first:
+                    for key in record.keys():  # noqa: SIM118
+                        table.add_column(key)
+                    first = False
+                table.add_row(*record.values_str())
 
             console = Console()
             console.print(table)

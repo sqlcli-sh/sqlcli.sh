@@ -33,6 +33,10 @@ class Record:
         """Returns the list of values from the query."""
         return self._values
 
+    def values_str(self) -> List[str]:
+        """Returns the list of values from the query."""
+        return [str(x) for x in self._values]
+
     def __repr__(self):
         """Returns a string representation of the Record."""
         return "<Record {}>".format(self.export("json")[1:-1])
