@@ -1,10 +1,14 @@
 import csv
 import logging
+from contextlib import closing
 from shutil import rmtree
-from typing import Dict
+from typing import Dict, Generator
 
 import pytest
 from sqlalchemy import create_engine, text
+
+from sqlcli.api import open_catalog
+from sqlcli.core.catalog import Catalog
 
 sqlite_catalog_conf = """
 catalog:
@@ -70,3 +74,14 @@ def load_countries_of_the_world_data(temp_sqlite_path):
             conn.commit()
 
     return temp_sqlite_path
+
+
+@pytest.fixture(scope="module")
+def open_catalog_connection(tmpdir_factory, temp_sqlite_path) -> Generator[Catalog, None, None]:
+    """Open a connection to the SQLite database."""
+    with closing(
+        open_catalog(
+            app_dir=tmpdir_factory.mktemp("sqlcli_test"), uri=f"sqlite:///{temp_sqlite_path}"
+        )
+    ) as conn:
+        yield conn

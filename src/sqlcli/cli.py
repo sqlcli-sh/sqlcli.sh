@@ -1,11 +1,13 @@
 """sqlcli CLI."""
 
+from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
+import sqlcli.settings
 from sqlcli.core.database import Database
 
 app = typer.Typer()
@@ -28,7 +30,8 @@ def version_callback(value: bool):
 @app.callback(invoke_without_command=True)
 def cli(
     version: Annotated[
-        Optional[bool], typer.Option("--version", callback=version_callback, is_eager=True)
+        Optional[bool],
+        typer.Option("--version", callback=version_callback, is_eager=True),
     ] = None,
 ) -> None:
     """Main CLI function. Creates the application directory if it doesn't exist.
@@ -37,6 +40,11 @@ def cli(
         config_path (Path): Path to the configuration directory.
         version (Optional[bool]): If True, the version of the application is printed.
     """
+    app_dir = typer.get_app_dir("sqlcli")
+    app_dir_path = Path(app_dir)
+    app_dir_path.mkdir(parents=True, exist_ok=True)
+
+    sqlcli.settings.APP_DIR = app_dir_path
 
 
 @app.command()
