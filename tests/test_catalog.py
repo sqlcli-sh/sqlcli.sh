@@ -265,6 +265,30 @@ def test_get_column_by_id(managed_session):
     assert column_by_id.fqdn == ("test", "default", "page", "page_title")
 
 
+def test_get_schemas(managed_session):
+    catalog = managed_session
+    schemas = catalog.get_schemas("test")
+    assert len(schemas) == 1
+
+
+def test_get_tables(managed_session):
+    catalog = managed_session
+    tables = catalog.get_tables("test", "default")
+    assert len(tables) == 8
+
+
+def test_get_columns(managed_session):
+    catalog = managed_session
+    columns = catalog.get_columns("test", "default", "page")
+    assert len(columns) == 3
+
+
+def test_get_all_columns(managed_session):
+    catalog = managed_session
+    columns = catalog.get_columns(source_name="test", schema_name=None, table_name=None)
+    assert len(columns) == 32
+
+
 def test_search_source(managed_session):
     catalog = managed_session
     databases = catalog.search_sources("t%")
