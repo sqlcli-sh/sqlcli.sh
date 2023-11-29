@@ -244,6 +244,21 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cmdkit"
+version = "2.7.3"
+description = "A command-line utility toolkit for Python."
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "cmdkit-2.7.3-py3-none-any.whl", hash = "sha256:0a8b1f0ce9797d3b08fceec89098a884b575787da36121efac2fc16bee54f612"},
+    {file = "cmdkit-2.7.3.tar.gz", hash = "sha256:3944affe477dee99c198e81c9e38cc5df97ed10a9684c52e4d7e07271a6fe76e"},
+]
+
+[package.dependencies]
+pyyaml = ">=5.3.1"
+toml = ">=0.10.1"
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -813,6 +828,20 @@ files = [
     {file = "mypy_extensions-1.0.0-py3-none-any.whl", hash = "sha256:4392f6c0eb8a5668a69e23d168ffa70f0be9ccfd32b5cc2d26a34ae5b844552d"},
     {file = "mypy_extensions-1.0.0.tar.gz", hash = "sha256:75dbf8955dc00442a438fc4d0666508a9a97b6bd41aa2f0ffe9d2f2725af0782"},
 ]
+
+[[package]]
+name = "names-generator"
+version = "0.1.0"
+description = "Clone of the Moby/Docker random name generator as a Python package."
+optional = false
+python-versions = "*"
+files = [
+    {file = "names_generator-0.1.0-py3-none-any.whl", hash = "sha256:8fec2903c71204b64bbb12f2cce0fdabdcde2aa83ebea29025c7b6f62b55832b"},
+    {file = "names_generator-0.1.0.tar.gz", hash = "sha256:03d0deb20e4c179688018103eaee4004ac2b8d8ccc1f8152272f75168b6a0b41"},
+]
+
+[package.dependencies]
+cmdkit = ">=2.1.2"
 
 [[package]]
 name = "nodeenv"
@@ -1523,6 +1552,17 @@ files = [
 ]
 
 [[package]]
+name = "toml"
+version = "0.10.2"
+description = "Python Library for Tom's Obvious, Minimal Language"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+files = [
+    {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
+    {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
+]
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -1670,4 +1710,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4.0"
-content-hash = "1ee23d82129c8d733b2059cf167bd0954473001f49f0751abff8886660bb15e7"
+content-hash = "41650e77983be09ad5f51ba2e054a3290f77b1a3daf11548a7ff103cb5424f1e"

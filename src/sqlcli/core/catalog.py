@@ -4,7 +4,6 @@ from typing import Generator, List, Optional
 
 from sqlalchemy import (
     TIMESTAMP,
-    Column,
     ForeignKey,
     Integer,
     String,
@@ -13,7 +12,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
+    Mapped,
     Session,
+    mapped_column,
     relationship,
     scoped_session,
     sessionmaker,
@@ -33,13 +34,12 @@ class CatSource(BaseModel):
 
     __tablename__ = "sources"
 
-    id = Column(Integer, primary_key=True)  # noqa: A003
-    name = Column(String, unique=True)
-    uri = Column(String)
+    id: Mapped[int] = mapped_column(primary_key=True)  # noqa: A003
+    name: Mapped[str] = mapped_column(String, unique=True)
+    uri: Mapped[str] = mapped_column(String)
 
-    schemata = relationship("CatSchema", back_populates="source")
-    default_schema = relationship(
-        "DefaultSchema",
+    schemata: Mapped[List["CatSchema"]] = relationship(back_populates="source")
+    default_schema: Mapped["DefaultSchema"] = relationship(
         back_populates="source",
         cascade="all, delete-orphan",
         uselist=False,
@@ -69,11 +69,11 @@ class CatSchema(BaseModel):
 
     __tablename__ = "schemata"
 
-    id = Column(Integer, primary_key=True)  # noqa: A003
-    name = Column(String)
-    source_id = Column(Integer, ForeignKey("sources.id"))
-    source = relationship("CatSource", back_populates="schemata", lazy="joined")
-    tables = relationship("CatTable", back_populates="schema")
+    id: Mapped[int] = mapped_column(primary_key=True)  # noqa: A003
+    name: Mapped[str] = mapped_column(String, unique=True)
+    source_id: Mapped[int] = mapped_column(ForeignKey("sources.id"))
+    source: Mapped["CatSource"] = relationship(back_populates="schemata", lazy="joined")
+    tables: Mapped[List["CatTable"]] = relationship(back_populates="schema")
 
     __table_args__ = (UniqueConstraint("source_id", "name", name="unique_schema_name"),)
 
@@ -101,10 +101,10 @@ class DefaultSchema(BaseModel):
 
     __tablename__ = "default_schema"
 
-    source_id = Column(Integer, ForeignKey("sources.id"), primary_key=True)
-    schema_id = Column(Integer, ForeignKey("schemata.id"))
-    schema = relationship("CatSchema")
-    source = relationship("CatSource", back_populates="default_schema")
+    source_id: Mapped[int] = mapped_column(ForeignKey("sources.id"), primary_key=True)
+    schema_id: Mapped[int] = mapped_column(Integer, ForeignKey("schemata.id"))
+    schema: Mapped["CatSchema"] = relationship()
+    source: Mapped["CatSource"] = relationship(back_populates="default_schema")
 
 
 class CatTable(BaseModel):
@@ -112,12 +112,11 @@ class CatTable(BaseModel):
 
     __tablename__ = "tables"
 
-    id = Column(Integer, primary_key=True)  # noqa: A003
-    name = Column(String)
-    schema_id = Column(Integer, ForeignKey("schemata.id"))
-    schema = relationship("CatSchema", back_populates="tables", lazy="joined")
-    columns = relationship(
-        "CatColumn",
+    id: Mapped[int] = mapped_column(primary_key=True)  # noqa: A003
+    name: Mapped[str] = mapped_column(String, unique=True)
+    schema_id: Mapped[int] = mapped_column(ForeignKey("schemata.id"))
+    schema: Mapped["CatSchema"] = relationship(back_populates="tables", lazy="joined")
+    columns: Mapped[List["CatColumn"]] = relationship(
         back_populates="table",
         order_by="CatColumn.sort_order",
     )  # type: ignore
@@ -146,12 +145,12 @@ class CatColumn(BaseModel):
 
     __tablename__ = "columns"
 
-    id = Column(Integer, primary_key=True)  # noqa: A003
-    name = Column(String)
-    data_type = Column(String)
-    sort_order = Column(Integer)
-    table_id = Column(Integer, ForeignKey("tables.id"))
-    table = relationship("CatTable", back_populates="columns", lazy="joined")
+    id: Mapped[int] = mapped_column(primary_key=True)  # noqa: A003
+    name: Mapped[str] = mapped_column(String, unique=True)
+    data_type: Mapped[str]
+    sort_order: Mapped[int]
+    table_id: Mapped[int] = mapped_column(ForeignKey("tables.id"))
+    table: Mapped["CatTable"] = relationship(back_populates="columns", lazy="joined")
 
     __table_args__ = (UniqueConstraint("table_id", "name", name="unique_column_name"),)
 
@@ -513,6 +512,18 @@ class Catalog:
         assert self._current_session is not None
         return self._current_session.query(CatColumn).filter(CatColumn.id == column_id).one()
 
+    def get_source_by_uri(self, uri: str) -> CatSource:
+        """Gets a source from the catalog based on the provided name.
+
+        Args:
+            uri (str): The URI of the database.
+
+        Returns:
+            CatSource: The matching source.
+        """
+        assert self._current_session is not None
+        return self._current_session.query(CatSource).filter(CatSource.uri == uri).one()
+
     def get_sources(self) -> List[CatSource]:
         """Gets all sources in the catalog.
 
@@ -521,6 +532,77 @@ class Catalog:
         """
         assert self._current_session is not None
         return self._current_session.query(CatSource).all()
+
+    def get_schemas(self, source_name: str) -> List[CatSchema]:
+        """Gets all schemas in the catalog for the provided source.
+
+        Args:
+            source_name (str): The name of the source.
+
+        Returns:
+            List[CatSchema]: A list of all schemas in the catalog for the provided source.
+        """
+        assert self._current_session is not None
+        return (
+            self._current_session.query(CatSchema)
+            .join(CatSchema.source)
+            .filter(CatSource.name == source_name)
+            .all()
+        )
+
+    def get_tables(self, source_name: str, schema_name: Optional[str]) -> List[CatTable]:
+        """Gets all tables in the catalog for the provided source and schema.
+
+        Args:
+            source_name (str): The name of the source.
+            schema_name (str): The name of the schema.
+
+        Returns:
+            List[CatTable]: A list of all tables in the catalog for the provided source and schema.
+        """
+        assert self._current_session is not None
+        stmt = (
+            self._current_session.query(CatTable)
+            .join(CatTable.schema)
+            .join(CatSchema.source)
+            .filter(CatSource.name == source_name)
+        )
+
+        if schema_name is not None:
+            stmt = stmt.filter(CatSchema.name == schema_name)
+
+        return stmt.all()
+
+    def get_columns(
+        self, source_name: str, schema_name: Optional[str], table_name: Optional[str]
+    ) -> List[CatColumn]:
+        """Gets all columns in the catalog for the provided source, schema, and table.
+
+        Args:
+            source_name (str): The name of the source.
+            schema_name (str): The name of the schema.
+            table_name (str): The name of the schema.
+
+
+        Returns:
+            List[CatColumn]: A list of all columns in the catalog for the provided source, schema and table.
+        """
+        assert self._current_session is not None
+        stmt = (
+            self._current_session.query(CatColumn)
+            .join(CatColumn.table)
+            .join(CatTable.schema)
+            .join(CatSchema.source)
+            .filter(CatSource.name == source_name)
+        )
+
+        if table_name is not None:
+            stmt = stmt.filter(CatTable.name == table_name)
+        if schema_name is not None:
+            stmt = stmt.filter(CatSchema.name == schema_name)
+
+        stmt = stmt.order_by(CatSchema.name, CatTable.name, CatColumn.sort_order)
+        return stmt.all()
 
     def search_sources(self, source_like: str) -> List[CatSource]:
         """Searches for sources in the catalog based on the provided source_like pattern.

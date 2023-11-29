@@ -28,6 +28,7 @@ sqlalchemy = "^2.0.23"
 rich = "^13.7.0"
 sqlalchemy-mixins = "^2.0.5"
 alembic = "^1.12.1"
+names-generator = "^0.1.0"
 
 [tool.poetry.group.test.dependencies]  # https://python-poetry.org/docs/master/managing-dependencies/
 commitizen = ">=3.2.1"

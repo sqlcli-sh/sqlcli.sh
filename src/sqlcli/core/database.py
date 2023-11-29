@@ -1,8 +1,9 @@
 import os
 from contextlib import contextmanager
-from typing import Optional
+from typing import Generator, Optional
 
 from sqlalchemy import create_engine, exc, inspect
+from sqlalchemy.engine.interfaces import ReflectedColumn
 
 from sqlcli.core.connection import Connection, SQLAlchemyConnection
 from sqlcli.core.records import RecordCollection
@@ -48,11 +49,6 @@ class Database:
         """Return a string representation of the Database object."""
         return f"<Database open={self.open}>"
 
-    def get_table_names(self, internal=False):
-        """Returns a list of table names for the connected database."""
-        # Setup SQLAlchemy for Database inspection.
-        return inspect(self._engine).get_table_names()
-
     def get_connection(self) -> Connection:
         """Get a connection to this Database. Connections are retrieved from a pool."""
         if not self.open:
@@ -83,6 +79,21 @@ class Database:
         """Like Database.bulk_query, but takes a filename to load a query from."""
         with self.get_connection() as conn:
             conn.bulk_query_file(path, *multiparams)
+
+    def schemata(self) -> Generator[str, None, None]:
+        """Returns a list of schemata for the connected database."""
+        # Setup SQLAlchemy for Database inspection.
+        yield from inspect(self._engine).get_schema_names()
+
+    def tables(self, schema: str) -> Generator[str, None, None]:
+        """Returns a list of tables for the connected database."""
+        # Setup SQLAlchemy for Database inspection.
+        yield from inspect(self._engine).get_table_names(schema)
+
+    def columns(self, schema: str, table: str) -> Generator[ReflectedColumn, None, None]:
+        """Returns a list of columns for the connected database."""
+        # Setup SQLAlchemy for Database inspection.
+        yield from inspect(self._engine).get_columns(table, schema)
 
     @contextmanager
     def transaction(self):
